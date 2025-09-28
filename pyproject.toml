@@ -5,6 +5,7 @@ description = "Perplexity Clone Backend"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "asyncpg>=0.30.0",
     "fastapi>=0.116.1",
     "langchain-openai>=0.3.31",
     "langgraph>=0.6.6",
