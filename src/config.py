@@ -6,6 +6,8 @@ class Config(BaseSettings):
     debug: bool = False
     port: int = 8000
     allow_origins: str = "*"
+    access_token_secret: str
+    access_token_expire: int
 
     class Config:
         env_file = ".env"

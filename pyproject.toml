@@ -5,15 +5,18 @@ description = "Perplexity Clone Backend"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.16.5",
     "asyncpg>=0.30.0",
     "bcrypt>=5.0.0",
     "dotenv>=0.9.9",
     "fastapi>=0.116.1",
+    "jwt>=1.4.0",
     "langchain-openai>=0.3.31",
     "langgraph>=0.6.6",
     "langgraph-checkpoint-postgres>=2.0.23",
     "psycopg2-binary>=2.9.10",
     "pydantic-settings>=2.11.0",
+    "pyjwt>=2.10.1",
     "python-dotenv>=1.1.1",
     "sqlalchemy[asyncio]>=2.0.43",
     "uvicorn[standard]>=0.35.0",
@@ -21,7 +24,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=25.9.0",
     "ruff>=0.13.2",
 ]
 

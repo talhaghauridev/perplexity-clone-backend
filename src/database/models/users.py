@@ -3,15 +3,18 @@ from typing import Optional, List
 from sqlalchemy import String, DateTime, Boolean, Text, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from src.constants import (
+    AVAILABLE_AUTH_PROVIDERS,
+    AVAILABLE_VERIFICATIONS,
+    AuthProviderType,
+)
 from src.utils.mixins import TimestampMixin
 from ..base import Base, UUIDPk, UUIDFk
 
-AuthProvider = ENUM(
-    "custom", "google", "github", name="auth_provider", create_type=False
-)
+AuthProvider = ENUM(*AVAILABLE_AUTH_PROVIDERS, name="auth_provider", create_type=False)
 
 VerificationType = ENUM(
-    "EMAIL", "PASSWORD_RESET", "PHONE", name="verification_type", create_type=False
+    *AVAILABLE_VERIFICATIONS, name="verification_type", create_type=False
 )
 
 
@@ -22,7 +25,7 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     password: Mapped[str] = mapped_column(String(60))
     profile_picture: Mapped[Optional[str]] = mapped_column(Text)
-    provider: Mapped[str] = mapped_column(AuthProvider, default="CUSTOM")
+    provider: Mapped[str] = mapped_column(AuthProvider, default=AuthProviderType.CUSTOM)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     verifications: Mapped[List["Verification"]] = relationship(

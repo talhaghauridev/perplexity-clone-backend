@@ -3,30 +3,37 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from .database import init_db, create_tables, close_db
+from .database import init_db, close_db
 from .routes import router
 from .config import config
+from .middlewares.error_handler import error_handler_middleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
-    create_tables()
-    print("✅ Database connected!")
+    """Application lifespan manager"""
+    try:
+        init_db()
+        print("✅ Database connected!")
+
+    except Exception as e:
+        print(f"❌ Failed to initialize database: {str(e)}")
+        raise
 
     yield
 
-    close_db()
-    print("👋 App stopped!")
+    try:
+        close_db()
+        print("👋 App stopped!")
+    except Exception as e:
+        print(f"Error during shutdown: {str(e)}")
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Perplexity Clone API",
         lifespan=lifespan,
-        debug=True,
     )
-    print(config.allow_origins.split(","))
 
     app.add_middleware(
         CORSMiddleware,
@@ -35,6 +42,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.middleware("http")(error_handler_middleware)
     app.mount("/public", StaticFiles(directory="public"), name="public")
 
     @app.get("/favicon.ico", include_in_schema=False)

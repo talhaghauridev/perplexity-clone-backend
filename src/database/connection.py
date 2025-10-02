@@ -1,14 +1,17 @@
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session
-from .models.users import AuthProvider, VerificationType
+from sqlalchemy.exc import OperationalError
+import time
+import logging
 from src.config import config
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 def create_database_engine(echo: bool = False):
-    """Create sync engine"""
+    """Create database engine"""
     database_url = config.database_url
     if not database_url:
         raise ValueError("DATABASE_URL not found")
@@ -20,39 +23,55 @@ def create_database_engine(echo: bool = False):
 
 engine = None
 SessionLocal = None
-
 db = None
 
 
-def init_db():
-    """Initialize database - called once at startup"""
+def init_db(max_retries: int = 5, retry_delay: int = 2):
+    """Initialize database with retry logic"""
     global engine, SessionLocal, db
 
-    engine = create_database_engine(echo=False)
-    SessionLocal = scoped_session(sessionmaker(bind=engine))
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"Connecting to database (attempt {attempt}/{max_retries})...")
 
-    db = SessionLocal()
+            engine = create_database_engine(echo=config.debug)
 
-    print("✅ Database initialized!")
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
 
+            SessionLocal = scoped_session(sessionmaker(bind=engine))
+            db = SessionLocal()
 
-def create_tables():
-    """Create all tables"""
-    from .base import Base
+            logger.info("✅ Database initialized!")
+            return
 
-    AuthProvider.create(engine, checkfirst=True)
-    VerificationType.create(engine, checkfirst=True)
-    Base.metadata.create_all(engine)
+        except OperationalError as e:
+            logger.warning(
+                f"Connection failed (attempt {attempt}/{max_retries}): {str(e)}"
+            )
 
-    print("✅ Tables created!")
+            if attempt == max_retries:
+                logger.error("❌ Failed to connect to database")
+                raise
+
+            wait_time = retry_delay * attempt
+            logger.info(f"Retrying in {wait_time} seconds...")
+            time.sleep(wait_time)
 
 
 def close_db():
-    """Close database connection"""
-    global db
-    if db:
-        db.close()
-        SessionLocal.remove()
-    if engine:
-        engine.dispose()
-    print("🔌 Database closed!")
+    """Close database connections"""
+    global db, engine
+
+    try:
+        if db:
+            db.close()
+            SessionLocal.remove()
+
+        if engine:
+            engine.dispose()
+
+        logger.info("🔌 Database closed!")
+
+    except Exception as e:
+        logger.error(f"Error closing database: {str(e)}")
